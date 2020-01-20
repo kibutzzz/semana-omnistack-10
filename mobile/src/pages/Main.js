@@ -15,6 +15,7 @@ import {
 } from "expo-location";
 
 import api from "../services/api";
+import { connect, disconnect, subscribeToNewDevs } from "../services/socket";
 
 function Main({ navigation }) {
   const [devs, setDevs] = useState([]);
@@ -44,22 +45,37 @@ function Main({ navigation }) {
     loadInitialPosition();
   }, []);
 
+  useEffect(() => {
+    subscribeToNewDevs(function(dev) {
+      console.log(dev)
+      
+      setDevs([...devs, dev]);
+    });
+  }, [devs]);
+
+  function setupWebsocket() {
+    disconnect();
+
+    const { latitude, longitude } = currentRegion;
+
+    connect(latitude, longitude, techs);
+  }
+
   async function loadDevs() {
     const { latitude, longitude } = currentRegion;
-    console.log("regiao", currentRegion);
     try {
       const response = await api.get("/search", {
         params: {
           latitude,
           longitude,
-          techs: "Javascript"
+          techs
         }
       });
 
       setDevs(response.data.devs);
-      console.log("novos Devs: ", devs);
+      setupWebsocket();
     } catch (e) {
-      //erro
+      console.error("ERRO: ", e);
     }
   }
 
